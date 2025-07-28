@@ -19,7 +19,7 @@ torch.manual_seed(42)
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='QA Evaluation with Aya-101 model')
+    parser = argparse.ArgumentParser()
     parser.add_argument('--max_examples', type=int, default=None)
     parser.add_argument('--model_path', type=str, default="CohereLab/aya-101")
     parser.add_argument('--results_csv', type=str, default='qa_results.csv')
@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument(
         '--metrics',
         type=str,
-        default="bleu,rouge1,rouge2,rougel,loss,generation_time",
+        default="bleu,rouge1,rouge2,rougel,loss",
         help="Comma-separated list of metrics to compute"
     )
     return parser.parse_args()
@@ -44,12 +44,7 @@ rouge_metric = evaluate.load("rouge") if any(m in selected_metrics for m in ['ro
 
 data = load_from_disk(args.data_path)
 
-
-######################
-# Scoring Functions
-######################
-
-def compute_perplexity_and_loss(question, answer, tokenizer, model, device):        #TODO: Add perplexity
+def compute_loss(question, answer, tokenizer, model, device):
     input_text = f"question: {question}"
     inputs = tokenizer(input_text, return_tensors="pt", truncation=True).to(device)
     with tokenizer.as_target_tokenizer():
@@ -70,11 +65,6 @@ def compute_rouge(reference, prediction):
         return (None, None, None)
     result = rouge_metric.compute(predictions=[prediction], references=[reference])
     return result.get('rouge1'), result.get('rouge2'), result.get('rougeL')
-
-
-######################
-# Evaluation Function
-######################
 
 def evaluate_qa(example, tokenizer, model, device):
     question = example['inputs']
@@ -110,20 +100,13 @@ def evaluate_qa(example, tokenizer, model, device):
         if 'rougel' in selected_metrics:
             results['rougel'] = rougel
 
-    if 'perplexity' in selected_metrics or 'loss' in selected_metrics:
-        loss = compute_perplexity_and_loss(question, gold_answer, tokenizer, model, device)
+    if 'loss' in selected_metrics:
+        loss = compute_loss(question, gold_answer, tokenizer, model, device)
         if 'loss' in selected_metrics:
             results['loss'] = loss
 
-    if 'generation_time' in selected_metrics:
-        results['generation_time'] = generation_time
-
     return results
 
-
-######################
-# Core Evaluation Loop
-######################
 
 def evaluate_model(model_path, subset_name=None, device=None):
     print(f"\nEvaluating {model_path} ...")
@@ -151,11 +134,6 @@ def evaluate_model(model_path, subset_name=None, device=None):
     del model, tokenizer
 
     return metrics, results
-
-
-######################
-# Results Saving
-######################
 
 def save_results(results_selected, results_random, ttests, pvals, coreset):
     os.makedirs(os.path.dirname(args.output_dir), exist_ok=True)
@@ -189,10 +167,6 @@ def save_results_single(results, subset_name, coreset):
         json.dump(results, f, indent=4)
 
 
-######################
-# Parallelisation
-######################
-
 def run_evaluation(model_path, subset_name, coreset, gpu_id):
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -211,9 +185,6 @@ def run_evaluation(model_path, subset_name, coreset, gpu_id):
 
     return metrics
 
-######################
-# Main Loop
-######################
 
 def main():
     if args.coreset_list:

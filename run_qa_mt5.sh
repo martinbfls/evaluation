@@ -22,27 +22,9 @@ export HF_TOKEN=                            # Complete with your tokens
 
 module load miniforge
 
-pip install --quiet --upgrade pip
-pip install --upgrade scikit-learn \
-                      ipdb \
-                      peft \
-                      deepspeed \
-                      triton \
-                      bitsandbytes \
-                      transformers \
-                      datasets \
-                      torch \
-                      accelerate \
-                      sentencepiece \
-                      numpy \
-                      torchvision \
-                      torchaudio \
-                      scipy \
-                      huggingface_hub[hf_transfer] \
-                      wandb \
-                      protobuf \
-                      rouge-score \
-                      evaluate \
+
+pip install --upgrade pip
+pip install -r /srv/home/users/beaufilsm35cs/evaluation/requirements.txt
 
 huggingface-cli login --token $HF_TOKEN
 huggingface-cli whoami
