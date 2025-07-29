@@ -1,3 +1,0 @@
-import transformers
-
-print('success')
